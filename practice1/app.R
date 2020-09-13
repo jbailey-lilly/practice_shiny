@@ -1,14 +1,27 @@
 library(shiny)
 library(ggplot2)
 library(vroom)
+library(plyr)
 
 
 ui <- fluidPage(
+    titlePanel("Simple Histogram Plot"),
     fileInput("file", NULL, accept = c(".csv", ".tsv")),
     numericInput("n", "Rows", value = 5, min = 1, step = 1),
     tableOutput("head"),
     plotOutput("histo1"),
-    plotOutput("histo2")
+    tableOutput("stats"),
+    plotOutput("histo2"),
+    textOutput("instructions"),
+    
+    
+    sidebarLayout(
+        sidebarPanel(),
+        mainPanel(
+            h1("Select .csv file with the following format:")
+            # cbind(c("ABCD", "ABCD", "ABCD", "CDEF", "CDEF", "CDEF"), c(0.98, 0.12,	0.36, 1.47, 0.18, 0.54))
+        )
+    )
 )
 
 server <- function(input, output, session) {
@@ -23,6 +36,11 @@ server <- function(input, output, session) {
         )
     })
     
+    output$stats <- renderTable({
+        ddply(data(), .(Study), summarize, N = length(Study), Mean = mean(Value),
+              Median = median(Value), SD = sd(Value))
+    })
+    
     output$head <- renderTable({
         head(data(), input$n)
     })
@@ -31,9 +49,16 @@ server <- function(input, output, session) {
         hist(data()$Value)
     })
     
+    
     output$histo2 <- renderPlot({
-        hist(data()$Value)
-    })
+        ggplot(data(), aes(x=Value, fill = Study)) + 
+            geom_histogram(binwidth = .2, alpha = .7, position = "identity", aes(y=..density..)) +
+            labs(title = "Simulated ISCP data", 
+                 x = "S:N")
+    }, res = 96)
+    
+
+    
 }
 
 shinyApp(ui, server)
